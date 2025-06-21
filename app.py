@@ -2,44 +2,67 @@
 
 import streamlit as st
 import pandas as pd
+import unicodedata
 from io import BytesIO
 
-st.set_page_config(page_title="Calculadora PEI", page_icon="🎓", layout="wide")
+# Función para normalizar texto (elimina tildes y pone minúsculas)
+def normalizar(texto):
+    texto = str(texto).lower()
+    texto = ''.join(
+        c for c in unicodedata.normalize('NFD', texto)
+        if unicodedata.category(c) != 'Mn'
+    )
+    return texto.strip()
 
+# Configuración Streamlit
+st.set_page_config(page_title="Calculadora PEI", page_icon="🎓", layout="wide")
 st.title("🎓 Calculadora Cuantitativa PEI UCuyo")
 
-# Subir archivo Excel
-uploaded_file = st.file_uploader("📤 Sube tu archivo Excel exportado de Google Sheets", type=["xlsx"])
+# Subir archivo
+uploaded_file = st.file_uploader(
+    "📤 Sube tu archivo Excel exportado de Google Sheets",
+    type=["xlsx"]
+)
 
 if uploaded_file is not None:
     df = pd.read_excel(uploaded_file)
 
-    # Mostrar DataFrame original
+    # Vista previa
     st.subheader("📑 Vista previa de los datos")
     st.dataframe(df)
 
-    # 1️⃣ Total de actividades (cantidad de filas)
+    # 1️⃣ Total de actividades
     st.subheader("1️⃣ Total de Actividades Cargadas")
     total_actividades = len(df)
     st.success(f"**Total de actividades registradas:** {total_actividades}")
 
     # 2️⃣ Cantidad por Objetivo Específico
     st.subheader("2️⃣ Cantidad de Actividades por Objetivo Específico")
-    # Detectar columnas que contengan 'actividades objetivo'
-    actividades_cols = [col for col in df.columns if 'actividades objetivo' in col.lower()]
+    actividades_cols = [
+        col for col in df.columns
+        if 'actividades objetivo' in normalizar(col)
+    ]
+
     resumen_objetivos = []
     for col in actividades_cols:
         conteo = df[col].notna().sum()
+        # Extraer número de objetivo si lo tiene
+        num = ''.join(filter(str.isdigit, col))
+        nombre_obj = f"Objetivo {num}" if num else col
         resumen_objetivos.append({
-            "Objetivo Específico": col,
+            "Objetivo Específico": nombre_obj,
             "Cantidad": int(conteo)
         })
-    df_objetivos = pd.DataFrame(resumen_objetivos)
+
+    df_objetivos = pd.DataFrame(resumen_objetivos).sort_values("Objetivo Específico")
     st.dataframe(df_objetivos)
 
     # 3️⃣ Cantidad por Unidad Académica o Administrativa
     st.subheader("3️⃣ Cantidad de Actividades por Unidad Académica o Administrativa")
-    unidad_col = [col for col in df.columns if 'unidad académica' in col.lower()]
+    unidad_col = [
+        col for col in df.columns
+        if 'unidad academica' in normalizar(col)
+    ]
     if unidad_col:
         col_name = unidad_col[0]
         df_unidad = df[col_name].value_counts().reset_index()
