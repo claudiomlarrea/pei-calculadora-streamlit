@@ -6,7 +6,7 @@ from io import BytesIO
 
 st.set_page_config(page_title="Calculadora PEI", page_icon="🎓", layout="wide")
 
-st.title("🎓 Calculadora Cuantitativa PEI UCuyo")
+st.title("🎓 Calculadora Cuantitativa PEI UCCuyo")
 
 # Subir archivo Excel
 uploaded_file = st.file_uploader("📤 Sube tu archivo Excel exportado de Google Sheets", type=["xlsx"])
