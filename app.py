@@ -25,12 +25,10 @@ if uploaded_file is not None:
 
     # 2️⃣ Cantidad por Objetivo Específico
     st.subheader("2️⃣ Cantidad de Actividades por Objetivo Específico")
-    # Detectar columnas que contengan 'actividades objetivo'
     actividades_cols = [col for col in df.columns if 'actividades objetivo' in col.lower()]
     resumen_objetivos = []
     for col in actividades_cols:
         conteo = df[col].notna().sum()
-        # Limpia nombre para que no tenga '110' o textos largos
         nombre_obj = col.split(" ")[-1].replace("110", "")
         resumen_objetivos.append({
             "Objetivo Específico": f"Objetivo {nombre_obj.strip()}",
@@ -48,10 +46,10 @@ if uploaded_file is not None:
         df_unidad.columns = ["Unidad Académica o Administrativa", "Cantidad"]
         st.dataframe(df_unidad)
     else:
-        st.warning("⚠️ No se encontró la columna **Unidad Académica o Administrativa** en tu archivo.")
+        st.warning("No se encontró la columna 'Unidad Académica o Administrativa' en tu archivo.")
 
     # 4️⃣ Exportar resultados
-    st.subheader("4️⃣ 📤 Exportar Resultados")
+    st.subheader("4️⃣ Exportar Resultados")
     def to_excel():
         output = BytesIO()
         with pd.ExcelWriter(output, engine='xlsxwriter') as writer:
@@ -64,31 +62,29 @@ if uploaded_file is not None:
 
     excel_data = to_excel()
     st.download_button(
-        label="📥 Descargar resultados en Excel",
+        label="Descargar resultados en Excel",
         data=excel_data,
         file_name="reporte_analisis_PEI.xlsx",
         mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
     )
 
     # 5️⃣ Interpretación y Conclusiones
-    st.subheader("5️⃣ 📊 Interpretación y Conclusiones")
-    with st.expander("📄 Ver interpretación general"):
-        st.markdown(f"""
-        ✅ **Interpretación:**
-        - Se registraron un total de **{total_actividades}** actividades en el plan institucional cargado.
-        - La distribución muestra cómo se agrupan estas actividades por objetivos específicos y por cada unidad académica o administrativa.
-        - El objetivo con más actividades es **{df_objetivos.sort_values('Cantidad', ascending=False).iloc[0]['Objetivo Específico']}** con **{df_objetivos['Cantidad'].max()}** actividades.
+    st.subheader("5️⃣ Interpretación y Conclusiones")
+    with st.expander("Ver interpretación general"):
+        objetivo_mas = df_objetivos.sort_values('Cantidad', ascending=False).iloc[0]['Objetivo Específico']
+        cantidad_mas = df_objetivos['Cantidad'].max()
 
-        📝 **Conclusiones:**
-        - La concentración de actividades puede indicar prioridades o áreas que requieren mayor apoyo institucional.
-        - Se recomienda revisar los objetivos con pocas actividades para evaluar oportunidades de fortalecimiento.
-        - Este análisis sirve como base para la planificación estratégica y toma de decisiones basadas en datos.
+        st.markdown(f"""
+**Interpretación:**
+- Se registraron un total de **{total_actividades}** actividades en el plan institucional.
+- La distribución muestra cómo se agrupan estas actividades por objetivos específicos y por unidad académica o administrativa.
+- El objetivo con más actividades es **{objetivo_mas}** con **{cantidad_mas}** actividades.
+
+**Conclusiones:**
+- La concentración de actividades puede indicar prioridades o áreas que requieren mayor apoyo.
+- Se recomienda revisar los objetivos con pocas actividades para evaluar oportunidades de fortalecimiento.
+- Este análisis es base para la planificación estratégica y la toma de decisiones basadas en datos.
         """)
 
 else:
-    st.info("👆 Por favor sube un archivo Excel para comenzar el análisis.")
-
-    📝 **Conclusión:**
-    - Este análisis cuantitativo permite identificar las áreas con mayor carga de planificación y aquellas que podrían requerir refuerzo o revisión estratégica.
-    - Se recomienda evaluar la coherencia entre los objetivos más cargados y los recursos disponibles en cada unidad académica.
-    """)
+    st.info("Por favor sube un archivo Excel para comenzar el análisis.")
