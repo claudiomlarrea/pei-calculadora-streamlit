@@ -26,14 +26,14 @@ st.metric("🔢 Total de Actividades", int(total_general))
 # Por Objetivo
 st.write("### 📈 Actividades por Objetivo")
 for obj in columns_objetivos:
-    st.write(f"- **{obj}**: {}".format(int(df[obj].sum())))
+    st.write(f"- **{obj}**: {int(df[obj].sum())}")
 
 # Filtro por Unidad Académica
 unidad = st.selectbox("Selecciona Unidad Académica", sorted(df['Unidad Académica'].unique()))
 df_unidad = df[df['Unidad Académica'] == unidad]
 total_unidad = df_unidad[columns_objetivos].sum().sum()
 
-st.write(f"### 📌 Total Actividades para {unidad}: **{}**".format(int(total_unidad)))
+st.write(f"### 📌 Total Actividades para {unidad}: **{int(total_unidad)}**")
 
 # Descarga filtrada
 csv_filtered = df_unidad.to_csv(index=False).encode('utf-8')
