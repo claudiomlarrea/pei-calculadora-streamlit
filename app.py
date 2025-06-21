@@ -1,73 +1,44 @@
+
 import streamlit as st
 import pandas as pd
-import io
 
-# Configuración de la página
-st.set_page_config(
-    page_title="PEI - Calculadora de Actividades",
-    layout="wide"
-)
+st.set_page_config(page_title="PEI Calculadora", layout="wide")
 
 st.title("📊 PEI - Calculadora de Actividades")
 
-# Subir archivo Excel
-uploaded_file = st.file_uploader(
-    "📂 Sube tu archivo Excel del PEI",
-    type=["xlsx"]
-)
+# Subida de archivo
+uploaded_file = st.file_uploader("📁 Sube tu archivo Excel exportado de Google Sheets", type=["xlsx"])
 
 if uploaded_file:
-    # Leer archivo
     df = pd.read_excel(uploaded_file)
 
-    # 1️⃣ Total de actividades
-    st.subheader("1️⃣ Total de Actividades Cargadas")
-    total_actividades = len(df)
-    st.success(f"Cantidad Total de Actividades: {total_actividades}")
+    # Mostrar cantidad total de actividades (todas las filas)
+    st.header("1️⃣ Total de Actividades Cargadas")
+    st.success(f"**Cantidad Total de Actividades:** {len(df)}")
 
-    # 2️⃣ Cantidad de actividades por Objetivo Específico
-    st.subheader("2️⃣ Cantidad de Actividades por Objetivo Específico")
+    # --- ANÁLISIS POR OBJETIVO ESPECÍFICO ---
+    filtro_objetivos = df[df['Objetivo Específico'].str.startswith("Actividades Objetivo", na=False)]
+    filtro_objetivos['Objetivo Resumido'] = filtro_objetivos['Objetivo Específico'].str.extract(r'(Objetivo \d+)')
+    filtro_objetivos['Objetivo Resumido'] = "Actividades " + filtro_objetivos['Objetivo Resumido']
+    resumen_objetivos = filtro_objetivos.groupby('Objetivo Resumido').size().reset_index(name='Cantidad')
 
-    # Buscar columna que contenga "Objetivo"
-    objetivo_col = None
-    for col in df.columns:
-        if "objetivo" in col.lower():
-            objetivo_col = col
-            break
+    st.header("2️⃣ Cantidad de Actividades por Objetivo Específico")
+    st.dataframe(resumen_objetivos)
 
-    if objetivo_col:
-        # Filtrar filas que contienen "Actividades Objetivo"
-        filtro = df[df[objetivo_col].astype(str).str.contains("Actividades Objetivo", case=False, na=False)].copy()
-
-        if not filtro.empty:
-            # Extraer número de objetivo
-            filtro["Número"] = filtro[objetivo_col].str.extract(r'(\d+)')
-
-            # Generar nombre limpio
-            filtro["Objetivo"] = "Actividades Objetivo " + filtro["Número"]
-
-            # Contar ocurrencias por objetivo
-            resumen = filtro.groupby("Objetivo").size().reset_index(name="Cantidad").sort_values("Objetivo")
-
-            # Mostrar en forma simple: Actividades Objetivo X = cantidad
-            for _, row in resumen.iterrows():
-                st.write(f"{row['Objetivo']} = {row['Cantidad']}")
-
-            # 3️⃣ Exportar resultados
-            st.subheader("3️⃣ Exportar Resultados")
-
-            output = io.BytesIO()
-            with pd.ExcelWriter(output, engine="xlsxwriter") as writer:
-                resumen.to_excel(writer, sheet_name="Resumen Objetivos", index=False)
-
-            st.download_button(
-                label="📥 Descargar Resumen en Excel",
-                data=output.getvalue(),
-                file_name="resumen_objetivos.xlsx",
-                mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
-            )
-
-        else:
-            st.warning("⚠️ No se encontraron filas con 'Actividades Objetivo' en la columna detectada.")
+    # --- ANÁLISIS POR UNIDAD ACADÉMICA O ADMINISTRATIVA ---
+    st.header("3️⃣ Cantidad de Actividades por Unidad Académica o Administrativa")
+    if 'Unidad Académica o Administrativa' in df.columns:
+        resumen_unidad = df.groupby('Unidad Académica o Administrativa').size().reset_index(name='Cantidad')
+        st.dataframe(resumen_unidad)
     else:
-        st.error("⚠️ No se encontró ninguna columna con 'Objetivo' en el nombre. Verifica tu archivo.")
+        st.warning("⚠️ La columna 'Unidad Académica o Administrativa' no se encontró en tu archivo.")
+
+    # --- EXPORTAR RESULTADOS ---
+    st.header("💾 Exportar Resultados")
+    from io import BytesIO
+    output = BytesIO()
+    with pd.ExcelWriter(output, engine='xlsxwriter') as writer:
+        resumen_objetivos.to_excel(writer, sheet_name='Por Objetivo', index=False)
+        if 'Unidad Académica o Administrativa' in df.columns:
+            resumen_unidad.to_excel(writer, sheet_name='Por Unidad', index=False)
+    st.download_button("⬇️ Descargar todos los resultados (.xlsx)", data=output.getvalue(), file_name="resultados_pei.xlsx")
