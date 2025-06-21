@@ -1,54 +1,61 @@
-
 import streamlit as st
 import pandas as pd
+import io
 
 st.set_page_config(page_title="Calculadora PEI UCU", page_icon="📊", layout="wide")
 
 st.title("📊 Calculadora PEI - Universidad Católica de Cuyo")
-st.subheader("Análisis Cuantitativo de Actividades del Plan Estratégico Institucional")
+st.write("Sube la hoja de cálculo Excel descargada de Google Sheets para analizar las actividades del Plan Estratégico Institucional.")
 
-# Cargar datos
-df = pd.read_csv("pei_data.csv")
+# 1️⃣ Subir archivo Excel
+uploaded_file = st.file_uploader("📁 Sube tu archivo Excel aquí:", type=["xlsx"])
 
-st.success("✅ Datos cargados correctamente.")
+if uploaded_file:
+    df = pd.read_excel(uploaded_file)
+    st.success("✅ Archivo cargado correctamente.")
 
-# Mostrar tabla
-st.dataframe(df)
+    st.subheader("📌 Vista previa de los datos")
+    st.dataframe(df)
 
-# Cálculos principales
-columns_objetivos = [col for col in df.columns if 'Objetivo' in col]
+    # 2️⃣ Total de actividades
+    total_actividades = df.shape[0]
+    st.metric("🔢 Total de Actividades Cargadas", total_actividades)
 
-totales = df[columns_objetivos].sum()
-total_general = totales.sum()
+    # 3️⃣ Actividades por Objetivo
+    st.subheader("🎯 Cantidad de Actividades por Objetivo Específico")
+    objetivos_cols = [col for col in df.columns if 'Objetivo' in col]
+    resumen_objetivos = {}
+    for obj in objetivos_cols:
+        resumen_objetivos[obj] = int(df[obj].sum())
+    st.write(resumen_objetivos)
 
-st.metric("🔢 Total de Actividades", int(total_general))
+    # 4️⃣ Actividades por Unidad Académica
+    st.subheader("🏛️ Cantidad de Actividades por Unidad Académica o Administrativa")
+    if 'Unidad Académica' in df.columns:
+        resumen_unidades = df.groupby('Unidad Académica').size().reset_index(name='Cantidad de Actividades')
+        st.dataframe(resumen_unidades)
+    else:
+        st.warning("⚠️ No se encontró la columna 'Unidad Académica' en tu archivo.")
 
-# Por Objetivo
-st.write("### 📈 Actividades por Objetivo")
-for obj in columns_objetivos:
-    st.write(f"- **{obj}**: {int(df[obj].sum())}")
+    # 5️⃣ Exportar resultados a Excel
+    st.subheader("💾 Exportar Resumen a Excel")
 
-# Filtro por Unidad Académica
-unidad = st.selectbox("Selecciona Unidad Académica", sorted(df['Unidad Académica'].unique()))
-df_unidad = df[df['Unidad Académica'] == unidad]
-total_unidad = df_unidad[columns_objetivos].sum().sum()
+    # Crear DataFrames de resumen
+    df_objetivos = pd.DataFrame(list(resumen_objetivos.items()), columns=['Objetivo', 'Cantidad'])
+    output = io.BytesIO()
+    with pd.ExcelWriter(output, engine='xlsxwriter') as writer:
+        df_objetivos.to_excel(writer, index=False, sheet_name='Por Objetivo')
+        if 'Unidad Académica' in df.columns:
+            resumen_unidades.to_excel(writer, index=False, sheet_name='Por Unidad')
+        df.to_excel(writer, index=False, sheet_name='Datos Originales')
+    processed_data = output.getvalue()
 
-st.write(f"### 📌 Total Actividades para {unidad}: **{int(total_unidad)}**")
+    st.download_button(
+        label="📥 Descargar Resumen en Excel",
+        data=processed_data,
+        file_name='Resumen_PEI.xlsx',
+        mime='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
+    )
+else:
+    st.info("👉 Por favor, sube primero tu archivo Excel para comenzar el análisis.")
 
-# Descarga filtrada
-csv_filtered = df_unidad.to_csv(index=False).encode('utf-8')
-st.download_button(
-    label="📥 Descargar Datos Filtrados",
-    data=csv_filtered,
-    file_name=f"{unidad}_PEI.csv",
-    mime='text/csv'
-)
-
-# Descargar general
-csv_all = df.to_csv(index=False).encode('utf-8')
-st.download_button(
-    label="📥 Descargar Todos los Datos",
-    data=csv_all,
-    file_name="PEI_Completo.csv",
-    mime='text/csv'
-)
