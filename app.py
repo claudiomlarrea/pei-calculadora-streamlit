@@ -78,3 +78,17 @@ if uploaded_file is not None:
 
 else:
     st.info("👆 Por favor sube un archivo Excel para comenzar el análisis.")
+# 5️⃣ Interpretación y Conclusiones
+st.subheader("5️⃣ 📊 Interpretación y Conclusiones")
+
+with st.expander("Ver interpretación general"):
+    st.markdown(f"""
+    ✅ **Interpretación:**
+    - Se registraron un total de **{total_actividades}** actividades en el plan institucional.
+    - El análisis muestra la distribución de actividades por objetivos específicos y por unidades académicas o administrativas.
+    - La mayor concentración se observa en los objetivos con más actividades (por ejemplo: {df_objetivos.sort_values('Cantidad', ascending=False).iloc[0]['Objetivo Específico']}).
+
+    📝 **Conclusión:**
+    - Este análisis cuantitativo permite identificar las áreas con mayor carga de planificación y aquellas que podrían requerir refuerzo o revisión estratégica.
+    - Se recomienda evaluar la coherencia entre los objetivos más cargados y los recursos disponibles en cada unidad académica.
+    """)
