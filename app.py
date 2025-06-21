@@ -2,44 +2,38 @@
 
 import streamlit as st
 import pandas as pd
-import re
 from io import BytesIO
 
-# Configuración de página
 st.set_page_config(page_title="Calculadora PEI", page_icon="🎓", layout="wide")
 
-st.title("🎓 PEI - Calculadora de Actividades")
+st.title("🎓 Calculadora Cuantitativa PEI UCuyo")
 
-# 📤 Subir archivo Excel
+# Subir archivo Excel
 uploaded_file = st.file_uploader("📤 Sube tu archivo Excel exportado de Google Sheets", type=["xlsx"])
 
 if uploaded_file is not None:
     df = pd.read_excel(uploaded_file)
 
-    # 📑 Mostrar DataFrame original
+    # Mostrar DataFrame original
     st.subheader("📑 Vista previa de los datos")
     st.dataframe(df)
 
-    # 1️⃣ Total de actividades
+    # 1️⃣ Total de actividades (cantidad de filas)
     st.subheader("1️⃣ Total de Actividades Cargadas")
     total_actividades = len(df)
-    st.success(f"**Cantidad Total de Actividades: {total_actividades}**")
+    st.success(f"**Total de actividades registradas:** {total_actividades}")
 
     # 2️⃣ Cantidad por Objetivo Específico
     st.subheader("2️⃣ Cantidad de Actividades por Objetivo Específico")
+    # Detectar columnas que contengan 'actividades objetivo'
     actividades_cols = [col for col in df.columns if 'actividades objetivo' in col.lower()]
     resumen_objetivos = []
     for col in actividades_cols:
         conteo = df[col].notna().sum()
-        # Extraer solo el primer número que aparezca usando regex
-        match = re.search(r'\d+', col)
-        if match:
-            num = match.group(0)
-        else:
-            num = ""
-        nombre_obj = f"Objetivo {num}" if num else col
+        # Limpia nombre para que no tenga '110' o textos largos
+        nombre_obj = col.split(" ")[-1].replace("110", "")
         resumen_objetivos.append({
-            "Objetivo Específico": nombre_obj,
+            "Objetivo Específico": f"Objetivo {nombre_obj.strip()}",
             "Cantidad": int(conteo)
         })
     df_objetivos = pd.DataFrame(resumen_objetivos)
@@ -76,17 +70,23 @@ if uploaded_file is not None:
         mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
     )
 
+    # 5️⃣ Interpretación y Conclusiones
+    st.subheader("5️⃣ 📊 Interpretación y Conclusiones")
+    with st.expander("📄 Ver interpretación general"):
+        st.markdown(f"""
+        ✅ **Interpretación:**
+        - Se registraron un total de **{total_actividades}** actividades en el plan institucional cargado.
+        - La distribución muestra cómo se agrupan estas actividades por objetivos específicos y por cada unidad académica o administrativa.
+        - El objetivo con más actividades es **{df_objetivos.sort_values('Cantidad', ascending=False).iloc[0]['Objetivo Específico']}** con **{df_objetivos['Cantidad'].max()}** actividades.
+
+        📝 **Conclusiones:**
+        - La concentración de actividades puede indicar prioridades o áreas que requieren mayor apoyo institucional.
+        - Se recomienda revisar los objetivos con pocas actividades para evaluar oportunidades de fortalecimiento.
+        - Este análisis sirve como base para la planificación estratégica y toma de decisiones basadas en datos.
+        """)
+
 else:
     st.info("👆 Por favor sube un archivo Excel para comenzar el análisis.")
-# 5️⃣ Interpretación y Conclusiones
-st.subheader("5️⃣ 📊 Interpretación y Conclusiones")
-
-with st.expander("Ver interpretación general"):
-    st.markdown(f"""
-    ✅ **Interpretación:**
-    - Se registraron un total de **{total_actividades}** actividades en el plan institucional.
-    - El análisis muestra la distribución de actividades por objetivos específicos y por unidades académicas o administrativas.
-    - La mayor concentración se observa en los objetivos con más actividades (por ejemplo: {df_objetivos.sort_values('Cantidad', ascending=False).iloc[0]['Objetivo Específico']}).
 
     📝 **Conclusión:**
     - Este análisis cuantitativo permite identificar las áreas con mayor carga de planificación y aquellas que podrían requerir refuerzo o revisión estratégica.
