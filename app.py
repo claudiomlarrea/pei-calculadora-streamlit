@@ -5,10 +5,10 @@ import pandas as pd
 import re
 from io import BytesIO
 
-# Configuración de página
-st.set_page_config(page_title="Calculadora PEI", page_icon="🎓", layout="wide")
+# ✅ Configuración final de página
+st.set_page_config(page_title="Calculadora Cuantitativa PEI UCCuyo", page_icon="🎓", layout="wide")
 
-st.title("🎓 PEI - Calculadora de Actividades")
+st.title("🎓 Calculadora Cuantitativa PEI UCCuyo")
 
 # 📤 Subir archivo Excel
 uploaded_file = st.file_uploader("📤 Sube tu archivo Excel exportado de Google Sheets", type=["xlsx"])
@@ -20,10 +20,10 @@ if uploaded_file is not None:
     st.subheader("📑 Vista previa de los datos")
     st.dataframe(df)
 
-    # 1️⃣ Total de actividades
+    # 1️⃣ Total de actividades (filas)
     st.subheader("1️⃣ Total de Actividades Cargadas")
     total_actividades = len(df)
-    st.success(f"**Cantidad Total de Actividades: {total_actividades}**")
+    st.success(f"**Cantidad Total de Actividades:** {total_actividades}")
 
     # 2️⃣ Cantidad por Objetivo Específico
     st.subheader("2️⃣ Cantidad de Actividades por Objetivo Específico")
@@ -31,12 +31,9 @@ if uploaded_file is not None:
     resumen_objetivos = []
     for col in actividades_cols:
         conteo = df[col].notna().sum()
-        # Extraer solo el primer número que aparezca usando regex
+        # Extraer número con regex
         match = re.search(r'\d+', col)
-        if match:
-            num = match.group(0)
-        else:
-            num = ""
+        num = match.group(0) if match else ""
         nombre_obj = f"Objetivo {num}" if num else col
         resumen_objetivos.append({
             "Objetivo Específico": nombre_obj,
@@ -44,6 +41,12 @@ if uploaded_file is not None:
         })
     df_objetivos = pd.DataFrame(resumen_objetivos)
     st.dataframe(df_objetivos)
+
+    # Mostrar suma de asignaciones
+    total_asignaciones = df_objetivos['Cantidad'].sum()
+    st.info(f"📌 **Total de asignaciones a objetivos:** {total_asignaciones} "
+            f"(nota: una actividad puede estar asignada a más de un objetivo, "
+            f"por lo que este total puede ser mayor que el total de actividades).")
 
     # 3️⃣ Cantidad por Unidad Académica o Administrativa
     st.subheader("3️⃣ Cantidad de Actividades por Unidad Académica o Administrativa")
@@ -56,8 +59,19 @@ if uploaded_file is not None:
     else:
         st.warning("⚠️ No se encontró la columna **Unidad Académica o Administrativa** en tu archivo.")
 
-    # 4️⃣ Exportar resultados
-    st.subheader("4️⃣ 📤 Exportar Resultados")
+    # 4️⃣ Interpretación y Conclusiones
+    st.subheader("4️⃣ 📌 Interpretación y Conclusiones")
+    st.info(
+        f"""
+        - Se registraron **{total_actividades}** actividades totales.
+        - La suma de asignaciones a objetivos (**{total_asignaciones}**) refleja que algunas actividades impactan en más de un objetivo estratégico.
+        - Esta herramienta cuantitativa ayuda a verificar la distribución de actividades por unidad y objetivo, 
+          facilitando el monitoreo y la mejora del Plan Estratégico Institucional (PEI) de la UCCuyo.
+        """
+    )
+
+    # 5️⃣ Exportar resultados
+    st.subheader("5️⃣ 📤 Exportar Resultados")
     def to_excel():
         output = BytesIO()
         with pd.ExcelWriter(output, engine='xlsxwriter') as writer:
