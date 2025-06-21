@@ -1,44 +1,47 @@
-
 import streamlit as st
 import pandas as pd
+import io
 
-st.set_page_config(page_title="PEI Calculadora", layout="wide")
-
+# Título principal
 st.title("📊 PEI - Calculadora de Actividades")
 
 # Subida de archivo
-uploaded_file = st.file_uploader("📁 Sube tu archivo Excel exportado de Google Sheets", type=["xlsx"])
+uploaded_file = st.file_uploader("Sube el archivo Excel del PEI", type=["xlsx"])
 
 if uploaded_file:
     df = pd.read_excel(uploaded_file)
 
-    # Mostrar cantidad total de actividades (todas las filas)
-    st.header("1️⃣ Total de Actividades Cargadas")
-    st.success(f"**Cantidad Total de Actividades:** {len(df)}")
+    # Mostrar total de actividades cargadas
+    total_actividades = len(df)
+    st.subheader("1️⃣ Total de Actividades Cargadas")
+    st.success(f"Cantidad Total de Actividades: {total_actividades}")
 
-    # --- ANÁLISIS POR OBJETIVO ESPECÍFICO ---
-    filtro_objetivos = df[df['Objetivo Específico'].str.startswith("Actividades Objetivo", na=False)]
-    filtro_objetivos['Objetivo Resumido'] = filtro_objetivos['Objetivo Específico'].str.extract(r'(Objetivo \d+)')
-    filtro_objetivos['Objetivo Resumido'] = "Actividades " + filtro_objetivos['Objetivo Resumido']
-    resumen_objetivos = filtro_objetivos.groupby('Objetivo Resumido').size().reset_index(name='Cantidad')
+    # Filtrar solo las filas que comienzan con 'Actividades Objetivo'
+    col_objetivo = [col for col in df.columns if 'Objetivo Específico' in col or 'Objetivo' in col][0]
+    filtro_objetivos = df[df[col_objetivo].astype(str).str.startswith("Actividades Objetivo", na=False)]
 
-    st.header("2️⃣ Cantidad de Actividades por Objetivo Específico")
-    st.dataframe(resumen_objetivos)
+    # Extraer número de objetivo y contar actividades por objetivo
+    filtro_objetivos["Objetivo Número"] = filtro_objetivos[col_objetivo].str.extract(r'Actividades Objetivo (\d+)')
+    resumen_objetivos = filtro_objetivos.groupby("Objetivo Número").size().reset_index(name="Cantidad")
+    resumen_objetivos = resumen_objetivos.sort_values(by="Objetivo Número")
 
-    # --- ANÁLISIS POR UNIDAD ACADÉMICA O ADMINISTRATIVA ---
-    st.header("3️⃣ Cantidad de Actividades por Unidad Académica o Administrativa")
-    if 'Unidad Académica o Administrativa' in df.columns:
-        resumen_unidad = df.groupby('Unidad Académica o Administrativa').size().reset_index(name='Cantidad')
-        st.dataframe(resumen_unidad)
-    else:
-        st.warning("⚠️ La columna 'Unidad Académica o Administrativa' no se encontró en tu archivo.")
+    # Mostrar tabla de actividades por objetivo específico
+    st.subheader("2️⃣ Cantidad de Actividades por Objetivo Específico")
+    resumen_objetivos["Descripción"] = "Actividades Objetivo " + resumen_objetivos["Objetivo Número"]
+    resumen_objetivos = resumen_objetivos[["Descripción", "Cantidad"]].rename(columns={"Descripción": "Objetivo Específico"})
+    st.table(resumen_objetivos)
 
-    # --- EXPORTAR RESULTADOS ---
-    st.header("💾 Exportar Resultados")
-    from io import BytesIO
-    output = BytesIO()
+    # Mostrar cantidad de actividades por Unidad Académica o Administrativa
+    col_unidad = [col for col in df.columns if 'Unidad Académica o Administrativa' in col][0]
+    resumen_unidad = df.groupby(col_unidad).size().reset_index(name="Cantidad")
+    st.subheader("3️⃣ Cantidad de Actividades por Unidad Académica o Administrativa")
+    st.table(resumen_unidad)
+
+    # Exportar resultados a Excel
+    st.subheader("💾 Exportar Resultados")
+    output = io.BytesIO()
     with pd.ExcelWriter(output, engine='xlsxwriter') as writer:
         resumen_objetivos.to_excel(writer, sheet_name='Por Objetivo', index=False)
-        if 'Unidad Académica o Administrativa' in df.columns:
-            resumen_unidad.to_excel(writer, sheet_name='Por Unidad', index=False)
-    st.download_button("⬇️ Descargar todos los resultados (.xlsx)", data=output.getvalue(), file_name="resultados_pei.xlsx")
+        resumen_unidad.to_excel(writer, sheet_name='Por Unidad', index=False)
+    output.seek(0)
+    st.download_button("📥 Descargar resultados (.xlsx)", data=output, file_name="resultados_PEI.xlsx", mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet")
